@@ -1,0 +1,1386 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#100d09">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>暗棋 · 落子見真章</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700;900&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-void:#100d09;
+    --wood-1:#5c3a22;
+    --wood-2:#432a18;
+    --wood-3:#2a190e;
+    --wood-rim:#1c1109;
+    --paper:#ece1c5;
+    --paper-shadow:#cabb92;
+    --red:#a8241c;
+    --red-deep:#6e140f;
+    --ink:#1c1a17;
+    --gold:#c9a227;
+    --gold-soft:#e4c766;
+    --jade:#4f7d6c;
+    --jade-light:#7fae9b;
+    --ivory-dim:#9c9482;
+    --font-display:'Noto Serif TC', serif;
+    --font-ui:'Noto Sans TC', sans-serif;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0; padding:0; min-height:100%;
+    overscroll-behavior:none;
+    background:
+      radial-gradient(ellipse at 50% -10%, #241a10 0%, transparent 60%),
+      var(--bg-void);
+    color:var(--paper);
+    font-family:var(--font-ui);
+    -webkit-tap-highlight-color:transparent;
+    touch-action:manipulation;
+  }
+  body::before{
+    content:"";
+    position:fixed; inset:0; pointer-events:none; z-index:1000;
+    opacity:.05; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .page{ max-width:1180px; margin:0 auto; padding:calc(env(safe-area-inset-top,0px) + 20px) 14px calc(env(safe-area-inset-bottom,0px) + 40px); }
+
+  header{
+    display:flex; align-items:flex-end; justify-content:space-between;
+    gap:16px; flex-wrap:wrap; margin-bottom:22px;
+    border-bottom:1px solid rgba(201,162,39,.25); padding-bottom:16px;
+  }
+  .brand{ display:flex; align-items:baseline; gap:14px; }
+  .brand h1{
+    font-family:var(--font-display); font-weight:900; font-size:clamp(30px,5vw,44px);
+    margin:0; letter-spacing:.08em; color:var(--paper);
+    text-shadow:0 2px 0 rgba(0,0,0,.5), 0 0 24px rgba(201,162,39,.15);
+  }
+  .brand .tagline{
+    font-size:12.5px; color:var(--ivory-dim); letter-spacing:.05em; font-family:var(--font-ui);
+  }
+  .toolbar{ display:flex; gap:10px; flex-wrap:wrap; }
+  .btn{
+    font-family:var(--font-ui); font-size:13.5px; font-weight:700; letter-spacing:.03em;
+    color:var(--paper); background:linear-gradient(180deg,var(--wood-1),var(--wood-2));
+    border:1px solid rgba(201,162,39,.35); border-radius:8px; padding:9px 16px;
+    cursor:pointer; box-shadow:0 2px 0 rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.06);
+    transition:transform .12s ease, border-color .12s ease;
+  }
+  .btn:hover{ border-color:var(--gold-soft); transform:translateY(-1px); }
+  .btn:active{ transform:translateY(0); }
+  .btn:disabled{ opacity:.35; cursor:not-allowed; transform:none; }
+  .btn:disabled:hover{ border-color:rgba(201,162,39,.35); transform:none; }
+  .btn.primary{ background:linear-gradient(180deg,#7a4a26,#4d2f18); border-color:var(--gold); }
+
+  .mode-bar{
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    flex-wrap:wrap; margin:0 0 16px;
+  }
+  .mode-bar.locked .seg{ opacity:.45; pointer-events:none; }
+  .mode-bar #btnStartGame{ order:99; }
+  .mode-bar.locked #btnStartGame{ display:none; }
+  .seg{
+    display:inline-flex; padding:3px; border-radius:999px;
+    background:linear-gradient(180deg,#1b140c,#120d08); border:1px solid rgba(201,162,39,.18);
+  }
+  .seg-btn{
+    font-family:var(--font-ui); font-size:12.5px; font-weight:700; letter-spacing:.02em;
+    color:var(--ivory-dim); background:transparent; border:none; border-radius:999px;
+    padding:7px 14px; cursor:pointer; transition:background .15s ease, color .15s ease;
+  }
+  .seg-btn.active{
+    color:var(--ink); background:linear-gradient(180deg,var(--gold-soft),var(--gold));
+    box-shadow:0 1px 3px rgba(0,0,0,.4);
+  }
+  .seg-btn:not(.active):hover{ color:var(--paper); }
+  .who{
+    display:block; font-size:10.5px; color:var(--gold-soft); font-weight:400; margin-top:1px;
+  }
+
+  .status-bar{
+    display:flex; align-items:center; justify-content:center; gap:18px;
+    flex-wrap:wrap; margin:0 0 20px;
+  }
+  .seal{
+    display:flex; align-items:center; gap:10px; padding:8px 14px 8px 8px;
+    border-radius:999px; background:linear-gradient(180deg,#241a10,#160f09);
+    border:1px solid rgba(201,162,39,.2); transition:box-shadow .25s ease, border-color .25s ease;
+  }
+  .seal .dot{
+    width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-display); font-weight:900; font-size:17px;
+    box-shadow:inset 0 0 0 2px rgba(0,0,0,.25);
+  }
+  .seal.red .dot{ background:radial-gradient(circle at 35% 30%,#c8382d,var(--red-deep)); color:var(--paper); }
+  .seal.black .dot{ background:radial-gradient(circle at 35% 30%,#3a352c,var(--ink)); color:var(--paper); }
+  .seal .info{ font-size:12px; color:var(--ivory-dim); line-height:1.3; }
+  .seal .info b{ color:var(--paper); font-size:13px; display:block; font-family:var(--font-ui);}
+  .seal.active{ border-color:var(--gold); box-shadow:0 0 0 1px var(--gold), 0 0 18px rgba(201,162,39,.35); }
+  .status-msg{
+    font-size:13.5px; color:var(--gold-soft); font-weight:700; text-align:center;
+    min-width:200px; letter-spacing:.02em;
+  }
+  .chase-status{
+    max-width:520px; margin:-10px auto 16px; text-align:center; font-size:12px;
+    color:#e2a23a; font-weight:700; letter-spacing:.02em;
+  }
+
+  .arena{ display:flex; justify-content:center; align-items:flex-start; gap:22px; flex-wrap:wrap; }
+  .tray{
+    width:150px; min-height:120px; padding:12px; border-radius:12px;
+    background:linear-gradient(180deg,#1b140c,#120d08); border:1px solid rgba(201,162,39,.15);
+  }
+  .tray h3{
+    margin:0 0 8px; font-size:11.5px; font-weight:700; letter-spacing:.08em;
+    color:var(--ivory-dim); text-transform:none; display:flex; justify-content:space-between;
+  }
+  .tray .grid{ display:flex; flex-wrap:wrap; gap:5px; }
+  .tray .mini{
+    width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-display); font-weight:700; font-size:13px; opacity:.55;
+    background:var(--paper); filter:grayscale(35%);
+  }
+  .tray .mini.red{ color:var(--red-deep); }
+  .tray .mini.black{ color:var(--ink); }
+
+  .board-wrap{ order:2; }
+  .board{
+    display:grid; grid-template-columns:repeat(8,1fr); grid-template-rows:repeat(4,1fr);
+    gap:9px; padding:18px;
+    width:min(88vw,760px); aspect-ratio:8/4.55;
+    border-radius:14px;
+    background:
+      repeating-linear-gradient(90deg, rgba(0,0,0,.08) 0 2px, transparent 2px 46px),
+      linear-gradient(155deg,var(--wood-1),var(--wood-2) 55%, var(--wood-3));
+    box-shadow:
+      0 18px 40px rgba(0,0,0,.55),
+      inset 0 0 0 1px rgba(201,162,39,.25),
+      inset 0 2px 10px rgba(0,0,0,.5);
+    position:relative;
+  }
+  .board.thinking{ opacity:.72; pointer-events:none; transition:opacity .2s ease; cursor:wait; }
+
+  .cell{
+    position:relative; border-radius:50%;
+    background:radial-gradient(circle at 40% 32%, rgba(0,0,0,.15), rgba(0,0,0,.42) 70%);
+    box-shadow:inset 0 2px 5px rgba(0,0,0,.55), inset 0 -1px 2px rgba(255,255,255,.04);
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+    -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
+  }
+  .cell.shake{ animation:shake .32s ease; }
+  @keyframes shake{
+    0%,100%{ transform:translateX(0); } 20%{ transform:translateX(-4px); }
+    40%{ transform:translateX(4px); } 60%{ transform:translateX(-3px); } 80%{ transform:translateX(3px); }
+  }
+  .cell.valid-move::after{
+    content:""; position:absolute; width:22%; height:22%; border-radius:50%;
+    background:var(--jade-light); opacity:.85; box-shadow:0 0 10px rgba(127,174,155,.7);
+    animation:pulse 1.4s ease-in-out infinite;
+  }
+  .cell.valid-capture::after{
+    content:""; position:absolute; inset:4%; border-radius:50%;
+    border:3px solid var(--red); box-shadow:0 0 12px rgba(168,36,28,.6);
+    animation:pulse 1.1s ease-in-out infinite;
+  }
+  @keyframes pulse{ 0%,100%{ opacity:.55; transform:scale(.92);} 50%{ opacity:1; transform:scale(1);} }
+  .cell.chase-banned::before{
+    content:"🚫"; position:absolute; font-size:15px; opacity:.85; z-index:5;
+    filter:drop-shadow(0 1px 2px rgba(0,0,0,.7));
+  }
+
+  .piece{
+    position:relative; width:88%; height:88%; border-radius:50%;
+    transform-style:preserve-3d; transition:transform .5s cubic-bezier(.34,1.56,.64,1);
+    cursor:pointer;
+  }
+  .piece.revealed{ transform:rotateY(180deg); }
+  .piece.selected{ filter:drop-shadow(0 0 8px rgba(127,174,155,.9)); transform:rotateY(180deg) scale(1.06); }
+  .piece.selected.revealed{ transform:rotateY(180deg) scale(1.06); }
+  .face{
+    position:absolute; inset:0; border-radius:50%; backface-visibility:hidden;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .face.back{
+    background:
+      radial-gradient(circle at 38% 30%, #7a4e2c, #4a2e18 60%, #2c1a0e 100%);
+    box-shadow:0 3px 6px rgba(0,0,0,.5), inset 0 0 0 2px rgba(201,162,39,.25), inset 0 0 14px rgba(0,0,0,.4);
+  }
+  .face.back::after{
+    content:""; width:46%; height:46%; border-radius:50%;
+    border:2px solid rgba(201,162,39,.35);
+    box-shadow:inset 0 0 0 5px rgba(0,0,0,.15);
+  }
+  .face.front{
+    transform:rotateY(180deg);
+    background:radial-gradient(circle at 38% 28%, var(--paper), var(--paper-shadow) 88%);
+    box-shadow:0 3px 8px rgba(0,0,0,.55), inset 0 0 0 2px rgba(255,255,255,.35), inset 0 0 12px rgba(0,0,0,.15);
+    font-family:var(--font-display); font-weight:900;
+    font-size:clamp(18px,3.6vw,30px);
+  }
+  .face.front.red{ color:var(--red-deep); }
+  .face.front.black{ color:var(--ink); }
+  .face.front.rank-general{ box-shadow:0 3px 8px rgba(0,0,0,.55), inset 0 0 0 2px var(--gold), inset 0 0 0 5px rgba(255,255,255,.3), inset 0 0 12px rgba(0,0,0,.15); }
+
+  .face.front .stamp-burst{
+    position:absolute; inset:-18%; border-radius:50%; border:2px solid var(--red);
+    opacity:0; pointer-events:none;
+  }
+  .piece.just-revealed .face.front .stamp-burst{ animation:stampBurst .55s ease-out; }
+  @keyframes stampBurst{
+    0%{ opacity:.9; transform:scale(.4); }
+    100%{ opacity:0; transform:scale(1.5); }
+  }
+
+  .cell.captured-slot{
+    background:radial-gradient(circle at 40% 35%, rgba(0,0,0,.1), rgba(0,0,0,.3) 75%);
+    box-shadow:inset 0 1px 3px rgba(0,0,0,.4);
+  }
+
+  .log-panel{
+    max-width:760px; margin:26px auto 0; background:linear-gradient(180deg,#1b140c,#120d08);
+    border:1px solid rgba(201,162,39,.15); border-radius:12px; overflow:hidden;
+  }
+  .log-panel summary{
+    cursor:pointer; padding:10px 16px; font-size:12.5px; font-weight:700;
+    color:var(--ivory-dim); letter-spacing:.04em; list-style:none; display:flex; justify-content:space-between;
+  }
+  .log-panel summary::-webkit-details-marker{ display:none; }
+  .log-panel summary::after{ content:"展開"; color:var(--gold-soft); font-weight:700; }
+  .log-panel[open] summary::after{ content:"收合"; }
+  .log-list{
+    max-height:180px; overflow-y:auto; padding:0 16px 14px; margin:0;
+    font-size:12.5px; color:var(--ivory-dim); display:flex; flex-direction:column-reverse; gap:4px;
+  }
+  .log-list li span.tag{ color:var(--gold-soft); }
+
+  .rules-modal{
+    position:fixed; inset:0; background:rgba(8,6,3,.72); backdrop-filter:blur(2px);
+    display:none; align-items:center; justify-content:center; z-index:200; padding:20px;
+  }
+  .rules-modal.show{ display:flex; }
+  .rules-card{
+    max-width:520px; width:100%; max-height:82vh; overflow-y:auto;
+    background:linear-gradient(180deg,#241a10,#170f09); border:1px solid rgba(201,162,39,.3);
+    border-radius:14px; padding:24px 26px; box-shadow:0 20px 50px rgba(0,0,0,.6);
+  }
+  .rules-card h2{ font-family:var(--font-display); margin-top:0; color:var(--gold-soft); font-size:22px; }
+  .rules-card h4{ margin:16px 0 6px; color:var(--paper); font-size:14px; }
+  .rules-card p, .rules-card li{ font-size:13.5px; line-height:1.7; color:#d8cdb4; margin:4px 0; }
+  .rules-card .rank-chain{ font-family:var(--font-display); font-size:15px; color:var(--gold-soft); letter-spacing:.05em; }
+  .rules-card .close-row{ text-align:right; margin-top:18px; }
+
+  .dice-card{ text-align:center; max-width:400px; }
+  .dice-sub{ color:#d8cdb4; font-size:13px; }
+  .dice-row{
+    display:flex; align-items:center; justify-content:center; gap:18px; margin:22px 0 10px;
+  }
+  .dice-side{ display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .dice-face{
+    font-size:56px; line-height:1; color:var(--gold-soft);
+    text-shadow:0 4px 10px rgba(0,0,0,.5);
+    filter:drop-shadow(0 0 6px rgba(201,162,39,.25));
+  }
+  .dice-face.rolling{ animation:diceRoll .3s ease-in-out infinite; }
+  @keyframes diceRoll{
+    0%{ transform:rotate(0deg) scale(1); } 50%{ transform:rotate(-12deg) scale(1.08); } 100%{ transform:rotate(0deg) scale(1); }
+  }
+  .dice-label{ font-size:12.5px; color:var(--ivory-dim); font-weight:700; }
+  .dice-vs{ font-family:var(--font-display); font-size:14px; color:var(--ivory-dim); font-weight:700; }
+  .dice-result{
+    min-height:20px; font-size:13.5px; color:var(--gold-soft); font-weight:700; margin:6px 0 4px;
+  }
+  .dice-card .close-row{ text-align:center; margin-top:8px; }
+
+  .gameover-banner{
+    max-width:760px; margin:18px auto 0; text-align:center; padding:14px 18px;
+    border-radius:12px; border:1px solid rgba(201,162,39,.4);
+    background:linear-gradient(180deg,#241a10,#170f09); display:none;
+  }
+  .gameover-banner.show{ display:block; }
+  .gameover-banner .win-text{
+    font-family:var(--font-display); font-size:20px; color:var(--gold-soft); font-weight:900;
+  }
+
+  footer{ text-align:center; margin-top:34px; font-size:11.5px; color:#6b6252; }
+
+  @media (max-width:900px){
+    .arena{ flex-direction:column; align-items:center; }
+    .tray{ order:3; width:min(88vw,760px); }
+    .tray.tray-red{ order:3; }
+    .tray.tray-black{ order:4; }
+    .board-wrap{ order:2; }
+    .tray .grid{ justify-content:center; }
+  }
+
+  .rotate-tip{
+    display:none; align-items:center; justify-content:space-between; gap:10px;
+    max-width:520px; margin:0 auto 14px; padding:9px 14px; border-radius:10px;
+    background:linear-gradient(180deg,#241a10,#170f09); border:1px solid rgba(201,162,39,.25);
+    font-size:12.5px; color:var(--gold-soft);
+  }
+  .rotate-tip button{
+    background:none; border:none; color:var(--ivory-dim); font-size:16px; line-height:1;
+    cursor:pointer; padding:4px 6px;
+  }
+  @media (max-width:640px) and (orientation:portrait){
+    .rotate-tip:not(.dismissed){ display:flex; }
+  }
+
+  @media (max-width:600px){
+    .page{ padding-left:8px; padding-right:8px; }
+    header{ gap:10px; }
+    .brand{ gap:10px; }
+    .brand h1{ font-size:26px; }
+    .toolbar{ gap:8px; }
+    .btn{ padding:8px 12px; font-size:12.5px; }
+    .board{ width:97vw; gap:5px; padding:9px; border-radius:11px; }
+    .face.front{ font-size:clamp(15px,6.4vw,22px); }
+    .status-bar{ gap:10px; }
+    .seal{ padding:6px 10px 6px 6px; }
+    .seal .dot{ width:28px; height:28px; font-size:14px; }
+    .seal .info{ font-size:11px; }
+    .status-msg{ font-size:12.5px; min-width:auto; flex-basis:100%; order:3; }
+    .tray{ width:97vw; padding:10px; }
+    .mode-bar{ gap:6px; }
+    .seg-btn{ padding:6px 10px; font-size:11.5px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <div class="brand">
+      <h1>暗棋</h1>
+      <div class="tagline">一局黑白未分，落子方見真章</div>
+    </div>
+    <div class="toolbar">
+      <button class="btn" id="btnRules">規則</button>
+      <button class="btn" id="btnMute">🔊 音效</button>
+      <button class="btn" id="btnUndo" hidden>↩ 悔棋</button>
+      <button class="btn primary" id="btnNew">新局</button>
+    </div>
+  </header>
+
+  <div class="rotate-tip" id="rotateTip">
+    <span>💡 手機直立時棋盤較擠，建議橫向持機體驗更寬敞</span>
+    <button id="rotateTipClose" aria-label="關閉提示">✕</button>
+  </div>
+
+  <div class="mode-bar" id="modeBar">
+    <div class="seg" id="modeSeg">
+      <button class="seg-btn active" data-mode="hotseat">雙人同機</button>
+      <button class="seg-btn" data-mode="ai">挑戰電腦</button>
+    </div>
+    <div class="seg" id="diffSeg" hidden>
+      <button class="seg-btn" data-diff="easy">簡單</button>
+      <button class="seg-btn active" data-diff="normal">普通</button>
+      <button class="seg-btn" data-diff="hard">困難</button>
+      <button class="seg-btn" data-diff="master">大師</button>
+    </div>
+    <button class="btn primary" id="btnStartGame">開始遊戲</button>
+  </div>
+
+  <div class="status-bar">
+    <div class="seal red" id="sealRed">
+      <div class="dot">紅</div>
+      <div class="info"><b id="redCount">16</b>尚存<span class="who" id="whoRed"></span></div>
+    </div>
+    <div class="status-msg" id="statusMsg">請翻開第一張棋子，決定你的顏色</div>
+    <div class="seal black" id="sealBlack">
+      <div class="dot">黑</div>
+      <div class="info"><b id="blackCount">16</b>尚存<span class="who" id="whoBlack"></span></div>
+    </div>
+  </div>
+
+  <div class="chase-status" id="chaseStatus" hidden></div>
+
+  <div class="arena">
+    <div class="tray tray-red">
+      <h3>紅方陣亡 <span id="redDeadCount">0</span></h3>
+      <div class="grid" id="trayRed"></div>
+    </div>
+
+    <div class="board-wrap">
+      <div class="board" id="board"></div>
+    </div>
+
+    <div class="tray tray-black">
+      <h3>黑方陣亡 <span id="blackDeadCount">0</span></h3>
+      <div class="grid" id="trayBlack"></div>
+    </div>
+  </div>
+
+  <div class="gameover-banner" id="gameoverBanner">
+    <div class="win-text" id="gameoverText"></div>
+    <button class="btn primary" id="btnReplay" style="margin-top:10px;">再來一局</button>
+  </div>
+
+  <details class="log-panel">
+    <summary>對局紀錄</summary>
+    <ul class="log-list" id="logList"></ul>
+  </details>
+
+  <footer>三十二子，靜待翻開 · 手工打造的暗棋棋局</footer>
+</div>
+
+<div class="rules-modal" id="diceModal">
+  <div class="rules-card dice-card">
+    <h2>擲骰定先後</h2>
+    <p class="dice-sub">兩顆骰子，點數大的一方先攻；同點數自動重擲。</p>
+    <div class="dice-row">
+      <div class="dice-side">
+        <div class="dice-face" id="diceFaceA">⚀</div>
+        <div class="dice-label" id="diceLabelA">玩家一</div>
+      </div>
+      <div class="dice-vs">VS</div>
+      <div class="dice-side">
+        <div class="dice-face" id="diceFaceB">⚀</div>
+        <div class="dice-label" id="diceLabelB">玩家二</div>
+      </div>
+    </div>
+    <div class="dice-result" id="diceResult"></div>
+    <div class="close-row"><button class="btn primary" id="btnRollDice">擲骰！</button></div>
+  </div>
+</div>
+
+<div class="rules-modal" id="rulesModal">
+  <div class="rules-card">
+    <h2>暗棋規則</h2>
+    <p>每局開始前會先擲骰決定誰先攻，接著棋盤共 32 格，紅黑棋子各 16 枚，開局時全部反扣。雙方輪流行動，每回合二選一：</p>
+    <ul>
+      <li><b>翻子</b>：翻開任一未知棋子。全局第一次翻子，決定你執掌的顏色。</li>
+      <li><b>行棋</b>：移動己方已翻開的棋子到相鄰空格，或吃掉相鄰的敵方棋子。</li>
+    </ul>
+    <h4>棋力大小（由大至小）</h4>
+    <p class="rank-chain">帥/將 &gt; 仕/士 &gt; 相/象 &gt; 俥/車 &gt; 傌/馬 &gt; 炮/包 &gt; 兵/卒</p>
+    <p>大子可吃同級或以下的敵子；<b>兵卒可直接吃將帥</b>，但將帥不能吃兵卒——這是暗棋唯一的以小博大。</p>
+    <h4>炮的特殊走法</h4>
+    <p>炮平時只能走到相鄰空格；若要吃子，須沿直線隔著剛好一枚棋子（不論明子暗子、敵我皆可作為炮架）跳吃對方明子，不受棋力大小限制。</p>
+    <h4>禁止長捉</h4>
+    <p>若同一枚棋子連續移動、每次都重新威脅同一枚敵子（對方則不斷走逃或設防應對），達 3 個迴圈以上，第 3 次重複視為「禁止著法」：追捉方不能再這樣走，必須改動別的棋子。若追捉方因此無棋可走，直接判負。</p>
+    <h4>勝負判定</h4>
+    <p>當對方棋子全部陣亡，或輪到對方時已無棋可走（沒有暗子可翻，且所有明子都動彈不得，含被禁止長捉的情況），即獲得勝利。</p>
+    <h4>擲骰定先後</h4>
+    <p>每局開始都會先擲骰：兩顆骰子點數大的一方先攻。挑戰電腦模式若電腦擲贏，會由電腦率先翻子；那顆棋子的顏色就是電腦的陣營，你執另一方。強度分為簡單／普通／困難／大師：困難與大師模式的電腦會多想一步，預判你吃回來的最佳應手，盡量不留破綻。當電腦棋子所剩無幾、局勢明顯無法挽回時，會直接投降認輸，不會硬撐到最後一兵一卒。</p>
+    <h4>悔棋</h4>
+    <p>僅限「挑戰電腦」模式。輪到你行棋時可按「↩ 悔棋」，會一次撤回你上一手與電腦的回應，回到換你重新行棋的狀態。</p>
+    <div class="close-row"><button class="btn primary" id="btnCloseRules">明白了</button></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  const ROWS=4, COLS=8, TOTAL=32;
+  const RANK={general:7,advisor:6,elephant:5,chariot:4,horse:3,cannon:2,soldier:1};
+  const NAMES={
+    red:{general:'帥',advisor:'仕',elephant:'相',chariot:'俥',horse:'傌',cannon:'炮',soldier:'兵'},
+    black:{general:'將',advisor:'士',elephant:'象',chariot:'車',horse:'馬',cannon:'包',soldier:'卒'}
+  };
+  const COUNTS={general:1,advisor:2,elephant:2,chariot:2,horse:2,cannon:2,soldier:5};
+
+  let pieces=[], cells=[];
+  let selected=null;
+  let currentColor=null;
+  let gameOver=false;
+  let muted=false;
+  let audioCtx=null;
+
+  // ---- vs-computer state ----
+  let mode='hotseat';       // 'hotseat' | 'ai'
+  let difficulty='normal';  // 'easy' | 'normal' | 'hard'
+  let humanColor=null;
+  let aiColor=null;
+  let isAiThinking=false;
+
+  // ---- dice (who-goes-first) phase ----
+  const DICE_FACES=['⚀','⚁','⚂','⚃','⚄','⚅'];
+  let diceInProgress=false;
+  let diceRolling=false;
+  let firstMover=null; // hotseat: 'p1'|'p2'   ai mode: 'human'|'ai'
+
+  // ---- long-chase ("長捉") tracking ----
+  // { chaserColor, chaserPieceId, targetPieceId, cycles } | null
+  let chaseState=null;
+
+  // ---- setup flow: settings can only be changed before a game starts ----
+  let gamePhase='setup'; // 'setup' | 'dice' | 'playing'
+
+  // ---- undo ("悔棋"), vs-computer mode only ----
+  // Snapshots taken right before each flip/move so a click can rewind back
+  // to the start of the human's last turn (undoing their move + the AI's reply).
+  let historyStack=[];
+
+  const boardEl=document.getElementById('board');
+  const statusMsgEl=document.getElementById('statusMsg');
+  const sealRedEl=document.getElementById('sealRed');
+  const sealBlackEl=document.getElementById('sealBlack');
+  const redCountEl=document.getElementById('redCount');
+  const blackCountEl=document.getElementById('blackCount');
+  const whoRedEl=document.getElementById('whoRed');
+  const whoBlackEl=document.getElementById('whoBlack');
+  const trayRedEl=document.getElementById('trayRed');
+  const trayBlackEl=document.getElementById('trayBlack');
+  const redDeadCountEl=document.getElementById('redDeadCount');
+  const blackDeadCountEl=document.getElementById('blackDeadCount');
+  const logListEl=document.getElementById('logList');
+  const gameoverBanner=document.getElementById('gameoverBanner');
+  const gameoverText=document.getElementById('gameoverText');
+  const chaseStatusEl=document.getElementById('chaseStatus');
+  const modeSegEl=document.getElementById('modeSeg');
+  const diffSegEl=document.getElementById('diffSeg');
+  const modeBarEl=document.getElementById('modeBar');
+  const btnStartGameEl=document.getElementById('btnStartGame');
+  const btnUndoEl=document.getElementById('btnUndo');
+  const diceModalEl=document.getElementById('diceModal');
+  const diceFaceAEl=document.getElementById('diceFaceA');
+  const diceFaceBEl=document.getElementById('diceFaceB');
+  const diceLabelAEl=document.getElementById('diceLabelA');
+  const diceLabelBEl=document.getElementById('diceLabelB');
+  const diceResultEl=document.getElementById('diceResult');
+  const btnRollDiceEl=document.getElementById('btnRollDice');
+
+  function buildDeck(){
+    const deck=[]; let id=0;
+    for(const color of ['red','black']){
+      for(const type of Object.keys(COUNTS)){
+        for(let i=0;i<COUNTS[type];i++) deck.push({id:id++,color,type,revealed:false,captured:false,cell:null});
+      }
+    }
+    return deck;
+  }
+  function shuffle(arr){
+    for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; }
+    return arr;
+  }
+  function rc(i){ return [Math.floor(i/COLS), i%COLS]; }
+  function idx(r,c){ return r*COLS+c; }
+  function neighbors(i){
+    const [r,c]=rc(i); const list=[];
+    if(r>0) list.push(idx(r-1,c));
+    if(r<ROWS-1) list.push(idx(r+1,c));
+    if(c>0) list.push(idx(r,c-1));
+    if(c<COLS-1) list.push(idx(r,c+1));
+    return list;
+  }
+  const DIRS=[[-1,0],[1,0],[0,-1],[0,1]];
+  function lineFrom(i,dir){
+    const [dr,dc]=dir; let [r,c]=rc(i); const list=[];
+    while(true){ r+=dr;c+=dc; if(r<0||r>=ROWS||c<0||c>=COLS) break; list.push(idx(r,c)); }
+    return list;
+  }
+  function canCapture(att,def){
+    if(att.type==='soldier'&&def.type==='general') return true;
+    if(att.type==='general'&&def.type==='soldier') return false;
+    return RANK[att.type]>=RANK[def.type];
+  }
+  function getValidMoves(cellIndex){
+    const pid=cells[cellIndex]; if(pid==null) return [];
+    const p=pieces[pid];
+    if(!p.revealed||p.captured) return [];
+    const moves=[];
+    if(p.type==='cannon'){
+      neighbors(cellIndex).forEach(n=>{ if(cells[n]==null) moves.push({to:n,capture:false}); });
+      DIRS.forEach(dir=>{
+        const line=lineFrom(cellIndex,dir);
+        let screenFound=false;
+        for(const n of line){
+          if(cells[n]==null){ continue; }
+          if(!screenFound){ screenFound=true; continue; }
+          const target=pieces[cells[n]];
+          if(target.revealed && target.color!==p.color) moves.push({to:n,capture:true});
+          break;
+        }
+      });
+    } else {
+      neighbors(cellIndex).forEach(n=>{
+        if(cells[n]==null){ moves.push({to:n,capture:false}); return; }
+        const def=pieces[cells[n]];
+        if(!def.revealed) return;
+        if(def.color===p.color) return;
+        if(canCapture(p,def)) moves.push({to:n,capture:true});
+      });
+    }
+    return moves;
+  }
+  function hasHiddenPieces(){ return pieces.some(p=>!p.revealed && !p.captured); }
+  function hasAnyLegalMove(color){
+    if(hasHiddenPieces()) return true;
+    for(let i=0;i<TOTAL;i++){
+      const pid=cells[i]; if(pid==null) continue;
+      const p=pieces[pid];
+      if(p.revealed && p.color===color && getLegalMovesForTurn(i).length>0) return true;
+    }
+    return false;
+  }
+  function sideLabel(color){ return color==='red' ? '紅方' : '黑方'; }
+  function opponentOf(color){ return color==='red' ? 'black' : 'red'; }
+
+  // ---------- long-chase ("禁止長捉") rule ----------
+  // If the same piece keeps moving to re-threaten the same single enemy piece
+  // turn after turn (the target fleeing or being defended each time) for 3
+  // cycles running, the 3rd repeat is an illegal move: the chasing side must
+  // play something else. We implement this by simply excluding that specific
+  // repeat move from the legal move list — if it happens to be the chaser's
+  // only option, the existing "no legal move" rule already makes them lose,
+  // which matches "否則判負".
+  const CHASE_BAN_AT_CYCLE=2; // once 2 cycles have completed, attempting a 3rd is banned
+
+  function threatenedTargetFrom(cellIndex, byColor){
+    // If the piece now sitting at cellIndex threatens exactly one enemy piece,
+    // return that enemy piece's id; otherwise null (forks/no-threats aren't tracked).
+    const caps=getValidMoves(cellIndex).filter(m=>m.capture);
+    if(caps.length!==1) return null;
+    const targetId=cells[caps[0].to];
+    if(targetId==null || pieces[targetId].color===byColor) return null;
+    return targetId;
+  }
+
+  function isChaseBannedMove(pieceId, fromIndex, toIndex){
+    if(!chaseState) return false;
+    if(chaseState.chaserPieceId!==pieceId) return false;
+    if(chaseState.cycles<CHASE_BAN_AT_CYCLE) return false;
+    if(pieces[chaseState.targetPieceId].captured) return false;
+    return simulateMove(fromIndex, toIndex, false, ()=>{
+      const caps=getValidMoves(toIndex).filter(m=>m.capture);
+      return caps.some(m=>cells[m.to]===chaseState.targetPieceId);
+    });
+  }
+
+  // Filters a piece's raw legal moves down to the ones actually allowed this
+  // turn. Used everywhere a real turn is being taken: human clicks, the AI's
+  // action pool, and legal-move existence checks.
+  function getLegalMovesForTurn(cellIndex){
+    const pid=cells[cellIndex]; if(pid==null) return [];
+    // captures are always allowed — taking the target simply ends any chase
+    return getValidMoves(cellIndex).filter(m=>m.capture || !isChaseBannedMove(pid,cellIndex,m.to));
+  }
+
+  // Called after every completed quiet move or capture to keep the chase
+  // tracker in sync. Flips are handled separately (they simply clear it).
+  function updateChaseState(mover, pieceId, isCapture){
+    if(isCapture){ chaseState=null; return; }
+    const p=pieces[pieceId];
+    const targetId=threatenedTargetFrom(p.cell, mover);
+    if(chaseState && chaseState.chaserColor===mover){
+      if(chaseState.chaserPieceId===pieceId && targetId===chaseState.targetPieceId){
+        chaseState.cycles++;
+      } else {
+        // the chasing side moved a different piece, or stopped re-threatening
+        // the same target — that's a legitimate "changed move", so reset.
+        chaseState = targetId!=null ? {chaserColor:mover, chaserPieceId:pieceId, targetPieceId:targetId, cycles:1} : null;
+      }
+    } else if(chaseState && chaseState.chaserColor!==mover){
+      // this was the defender's response (flee/protect) — leave the tracker
+      // as-is; whether the chase continues is decided on the chaser's next move.
+    } else {
+      chaseState = targetId!=null ? {chaserColor:mover, chaserPieceId:pieceId, targetPieceId:targetId, cycles:1} : null;
+    }
+  }
+
+  // ---------- AI engine ----------
+  // A relative worth for each piece type, used only to weigh capture/risk decisions.
+  const PIECE_VALUE={general:60,advisor:35,elephant:32,chariot:28,horse:24,cannon:34,soldier:16};
+  // Total starting worth of one full 16-piece side (446), used for resignation judgement.
+  const STARTING_SIDE_VALUE = Object.keys(COUNTS).reduce((sum,t)=>sum+COUNTS[t]*PIECE_VALUE[t],0);
+  let aiResignStreak=0;
+
+  // Remaining material worth of `color`. Every captured piece was necessarily
+  // revealed at the moment it was captured (you can only capture a face-up
+  // piece), so this is public information derivable from the capture log —
+  // it never peeks at the identity of a still-hidden piece.
+  function remainingValue(color){
+    const lost = pieces.filter(p=>p.color===color && p.captured).reduce((s,p)=>s+PIECE_VALUE[p.type],0);
+    return STARTING_SIDE_VALUE - lost;
+  }
+
+  // Temporarily applies a move/capture to the shared board state, runs `work()`,
+  // then perfectly restores the previous state. Used so the AI can "look one move
+  // ahead" without duplicating the board.
+  function simulateMove(from,to,isCapture,work){
+    const pid=cells[from]; const p=pieces[pid];
+    const prevFrom=cells[from], prevTo=cells[to], prevCell=p.cell;
+    let defId=null, defWasCaptured=false;
+    if(isCapture){ defId=cells[to]; defWasCaptured=pieces[defId].captured; pieces[defId].captured=true; }
+    cells[from]=null; cells[to]=pid; p.cell=to;
+    let result;
+    try{ result=work(); }
+    finally{
+      cells[from]=prevFrom; cells[to]=prevTo; p.cell=prevCell;
+      if(isCapture){ pieces[defId].captured=defWasCaptured; }
+    }
+    return result;
+  }
+
+  // Could any currently-revealed enemy piece capture onto `pos` right now?
+  function isPositionThreatened(pos, ownerColor){
+    const enemy=opponentOf(ownerColor);
+    for(let i=0;i<TOTAL;i++){
+      const pid=cells[i]; if(pid==null) continue;
+      const ep=pieces[pid];
+      if(ep.revealed && ep.color===enemy){
+        if(getValidMoves(i).some(m=>m.to===pos && m.capture)) return true;
+      }
+    }
+    return false;
+  }
+
+  function collectAllLegalActions(color){
+    const actions=[];
+    for(let i=0;i<TOTAL;i++){
+      const pid=cells[i]; if(pid==null) continue;
+      const p=pieces[pid];
+      if(!p.revealed){ actions.push({type:'flip',index:i}); continue; }
+      if(p.color===color){
+        getLegalMovesForTurn(i).forEach(m=>actions.push({type:m.capture?'capture':'move', from:i, to:m.to}));
+      }
+    }
+    return actions;
+  }
+
+  // Heuristic value of a candidate action. Higher is better for `color`.
+  // The AI reasons the same way a sighted player at the board would: it only
+  // ever inspects revealed pieces, never the hidden ones' true identities.
+  function scoreAction(action,color){
+    if(action.type==='flip'){
+      let score=8+Math.random()*4;
+      let riskWeight=0;
+      neighbors(action.index).forEach(n=>{
+        const pid=cells[n]; if(pid==null) return;
+        const pp=pieces[pid];
+        if(pp.revealed && pp.color===opponentOf(color)) riskWeight+=PIECE_VALUE[pp.type];
+      });
+      score-=riskWeight*0.045; // flipping beside a strong revealed enemy is riskier than beside a weak one
+      return score;
+    }
+
+    const attacker=pieces[cells[action.from]];
+
+    if(action.type==='capture'){
+      const defender=pieces[cells[action.to]];
+      let score=PIECE_VALUE[defender.type]*2.4; // taking material is (almost) always the priority
+      const stillThreatened=simulateMove(action.from,action.to,true, ()=>isPositionThreatened(action.to,color));
+      if(stillThreatened) score-=PIECE_VALUE[attacker.type]*1.6; // ...unless it's an obviously bad trade
+      score+=Math.random()*2;
+      return score;
+    }
+
+    // quiet move
+    const wasThreatened=isPositionThreatened(action.from,color);
+    let willBeThreatened=false, huntBonus=0;
+    simulateMove(action.from,action.to,false, ()=>{
+      willBeThreatened=isPositionThreatened(action.to,color);
+      // Reward closing in on a weaker enemy: if this square threatens a capture
+      // next turn, that's worth chasing even though the target might flee.
+      // This is what makes the AI actively hunt down enemy pieces instead of
+      // just flipping hidden tiles whenever it isn't personally under threat.
+      let bestTarget=0;
+      getValidMoves(action.to).forEach(m=>{
+        if(m.capture){ bestTarget=Math.max(bestTarget, PIECE_VALUE[pieces[cells[m.to]].type]); }
+      });
+      huntBonus=bestTarget;
+    });
+    let score = huntBonus>0 ? (5+huntBonus) : -2; // a real chase should clearly outweigh a default flip
+    if(willBeThreatened){
+      score -= PIECE_VALUE[attacker.type]*1.3;      // walking into danger (chasing or not)
+      if(wasThreatened) score -= 3;                  // ...and it wasn't safe to begin with either
+    } else if(wasThreatened){
+      score += PIECE_VALUE[attacker.type]*1.3;       // stepping out of danger
+    }
+    score+=Math.random()*2;
+    return score;
+  }
+
+  // Two-ply version used by the tougher difficulties: after trying an action,
+  // it also looks at the opponent's single best reply and subtracts that from
+  // the score. This catches things the 1-ply heuristic misses, e.g. moving a
+  // piece somewhere safe for itself but that opens up a *different* piece to
+  // be captured, or setting up a capture the opponent can't profitably answer.
+  function bestReplyScore(color){
+    const actions=collectAllLegalActions(color);
+    if(actions.length===0) return null; // no reply possible at all = opponent is stuck
+    let best=-Infinity;
+    for(const a of actions){ const s=scoreAction(a,color); if(s>best) best=s; }
+    return best;
+  }
+  function scoreActionDeep(action,color){
+    const base=scoreAction(action,color);
+    if(action.type==='flip') return base; // can't foresee what gets revealed, so no point looking deeper
+    const opp=opponentOf(color);
+    const adjustment=simulateMove(action.from,action.to,action.type==='capture', ()=>{
+      const reply=bestReplyScore(opp);
+      if(reply===null) return 200; // opponent would have no legal reply at all -> effectively winning
+      return -reply*0.55;
+    });
+    return base+adjustment;
+  }
+
+  function computeAiAction(color,level){
+    const actions=collectAllLegalActions(color);
+    if(actions.length===0) return null;
+    const useDeep = (level==='hard' || level==='master');
+    const scored=actions.map(a=>({a,score:useDeep?scoreActionDeep(a,color):scoreAction(a,color)}));
+    scored.sort((x,y)=>y.score-x.score);
+    const margin = level==='easy' ? 13 : level==='normal' ? 6 : level==='hard' ? 3 : 0.6;
+    const top=scored[0].score;
+    const pool=scored.filter(s=>s.score>=top-margin);
+    return pool[Math.floor(Math.random()*pool.length)].a;
+  }
+
+  // Whether the AI's position looks hopeless enough to concede rather than
+  // play on. Only fires once the AI is down to a handful of pieces (so a
+  // single early loss never triggers it) and is far behind on material.
+  // The threshold loosens slightly at higher difficulty, since a stronger
+  // AI "reads" a lost position more confidently and gives up sooner.
+  function shouldAiResign(color){
+    const myCount = pieces.filter(p=>p.color===color && !p.captured).length;
+    if(myCount>4) return false;
+    const myValue=remainingValue(color);
+    const oppValue=remainingValue(opponentOf(color));
+    if(myValue<=0 || oppValue<=0) return false;
+    const ratio=myValue/oppValue;
+    const threshold = difficulty==='easy' ? 0.16 : difficulty==='normal' ? 0.24 : 0.32;
+    return ratio<=threshold;
+  }
+
+  function checkAiResignation(){
+    if(mode!=='ai' || aiColor===null) return false; // nothing to resign from before the AI even has a color
+    if(!shouldAiResign(aiColor)){ aiResignStreak=0; return false; }
+    aiResignStreak++;
+    if(aiResignStreak<2) return false; // must look hopeless for two AI turns running, not just a rough patch
+    resignGame();
+    return true;
+  }
+
+  function resignGame(){
+    gameOver=true;
+    playSound('resign');
+    logMove(`<span class="tag">${sideLabel(aiColor)}</span> 電腦自知不敵，投降認輸`);
+    gameoverText.textContent = `電腦見大勢已去，投降認輸 · ${sideLabel(humanColor)}獲勝！`;
+    gameoverBanner.classList.add('show');
+    setMessage('電腦投降了');
+    render();
+  }
+
+  // Runs the AI's turn. Also doubles as the AI's very first move of the game
+  // when the dice roll gives it the opening flip (aiColor is still null at
+  // that point — collectAllLegalActions only offers flips on an empty board,
+  // so scoring with a placeholder color is harmless there).
+  function scheduleAiMove(){
+    isAiThinking=true;
+    boardEl.classList.add('thinking');
+    setMessage('電腦思考中…');
+    setTimeout(()=>{
+      isAiThinking=false;
+      boardEl.classList.remove('thinking');
+      if(gameOver) return;
+      if(checkAiResignation()) return;
+      const action=computeAiAction(aiColor || 'red', difficulty);
+      if(!action) return; // checkGameOver already handles the no-move case before this fires
+      if(action.type==='flip') performFlip(action.index, 'ai');
+      else performMove(action.from, action.to, action.type==='capture');
+    }, 550+Math.random()*500);
+  }
+
+  // ---------- audio ----------
+  function ensureAudio(){
+    if(!audioCtx){ try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
+    return audioCtx;
+  }
+  function playSound(kind){
+    if(muted) return;
+    const ctx=ensureAudio(); if(!ctx) return;
+    if(ctx.state==='suspended'){ ctx.resume(); }
+    const now=ctx.currentTime;
+    const osc=ctx.createOscillator(); const gain=ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    if(kind==='resign'){
+      osc.type='sine';
+      osc.frequency.setValueAtTime(420, now);
+      osc.frequency.exponentialRampToValueAtTime(90, now+0.75);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.18, now+0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now+0.8);
+      osc.start(now); osc.stop(now+0.82);
+      return;
+    }
+    let freq=440, dur=0.12, type='sine';
+    if(kind==='flip'){ freq=560; dur=0.11; type='triangle'; }
+    else if(kind==='move'){ freq=380; dur=0.08; type='sine'; }
+    else if(kind==='capture'){ freq=200; dur=0.2; type='sawtooth'; }
+    else if(kind==='invalid'){ freq=130; dur=0.12; type='square'; }
+    osc.type=type; osc.frequency.setValueAtTime(freq, now);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.16, now+0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now+dur);
+    osc.start(now); osc.stop(now+dur+0.02);
+  }
+
+  // ---------- game lifecycle ----------
+  function newGame(){
+    gamePhase='dice';
+    modeBarEl.classList.add('locked');
+    historyStack=[];
+    pieces=shuffle(buildDeck());
+    cells=new Array(TOTAL).fill(null);
+    pieces.forEach((p,i)=>{ p.cell=i; p.revealed=false; p.captured=false; cells[i]=p.id; });
+    selected=null; currentColor=null; gameOver=false;
+    humanColor=null; aiColor=null; isAiThinking=false; aiResignStreak=0;
+    firstMover=null;
+    chaseState=null;
+    boardEl.classList.remove('thinking');
+    logListEl.innerHTML='';
+    gameoverBanner.classList.remove('show');
+    buildBoardDom();
+    render();
+    openDicePhase();
+  }
+
+  // Returns to the pre-game setup screen: mode/difficulty settings can
+  // only be changed here — starting a game (and rolling dice) always goes
+  // through this screen first.
+  function showSetupScreen(){
+    gamePhase='setup';
+    modeBarEl.classList.remove('locked');
+    historyStack=[];
+    pieces=[]; cells=new Array(TOTAL).fill(null);
+    selected=null; currentColor=null; gameOver=false;
+    humanColor=null; aiColor=null; isAiThinking=false; aiResignStreak=0;
+    firstMover=null;
+    chaseState=null;
+    boardEl.classList.remove('thinking');
+    logListEl.innerHTML='';
+    gameoverBanner.classList.remove('show');
+    diceModalEl.classList.remove('show');
+    buildBoardDom();
+    render();
+    setMessage('請選擇模式，然後按下「開始遊戲」');
+  }
+
+  function buildBoardDom(){
+    boardEl.innerHTML='';
+    for(let i=0;i<TOTAL;i++){
+      const cell=document.createElement('div');
+      cell.className='cell';
+      cell.dataset.index=i;
+      cell.addEventListener('click',()=>onCellClick(i));
+      boardEl.appendChild(cell);
+    }
+  }
+
+  // ---------- dice phase (decides who goes first) ----------
+  function openDicePhase(){
+    diceInProgress=true;
+    diceRolling=false;
+    const nameA = mode==='ai' ? '你' : '玩家一';
+    const nameB = mode==='ai' ? '電腦' : '玩家二';
+    diceLabelAEl.textContent=nameA;
+    diceLabelBEl.textContent=nameB;
+    diceFaceAEl.textContent='⚀';
+    diceFaceBEl.textContent='⚀';
+    diceFaceAEl.classList.remove('rolling');
+    diceFaceBEl.classList.remove('rolling');
+    diceResultEl.textContent='';
+    btnRollDiceEl.disabled=false;
+    btnRollDiceEl.textContent='擲骰！';
+    setMessage('請先擲骰，決定誰先攻');
+    diceModalEl.classList.add('show');
+  }
+
+  function rollDice(){
+    if(diceRolling || !diceInProgress) return;
+    diceRolling=true;
+    btnRollDiceEl.disabled=true;
+    diceFaceAEl.classList.add('rolling');
+    diceFaceBEl.classList.add('rolling');
+    let ticks=0;
+    const maxTicks=12;
+    const interval=setInterval(()=>{
+      diceFaceAEl.textContent=DICE_FACES[Math.floor(Math.random()*6)];
+      diceFaceBEl.textContent=DICE_FACES[Math.floor(Math.random()*6)];
+      playSound('flip');
+      ticks++;
+      if(ticks>=maxTicks){
+        clearInterval(interval);
+        finishDiceRoll();
+      }
+    }, 90);
+  }
+
+  function finishDiceRoll(){
+    let a=1+Math.floor(Math.random()*6);
+    let b=1+Math.floor(Math.random()*6);
+    while(a===b){ a=1+Math.floor(Math.random()*6); b=1+Math.floor(Math.random()*6); } // sudden-death reroll on a tie
+    diceFaceAEl.textContent=DICE_FACES[a-1];
+    diceFaceBEl.textContent=DICE_FACES[b-1];
+    diceFaceAEl.classList.remove('rolling');
+    diceFaceBEl.classList.remove('rolling');
+    const aWins=a>b;
+    const nameA = mode==='ai' ? '你' : '玩家一';
+    const nameB = mode==='ai' ? '電腦' : '玩家二';
+    const winnerName = aWins ? nameA : nameB;
+    diceResultEl.textContent=`${nameA} ${a} 點：${b} 點 ${nameB} —— ${winnerName}先攻！`;
+    playSound('capture');
+    diceRolling=false;
+    firstMover = mode==='ai' ? (aWins ? 'human' : 'ai') : (aWins ? 'p1' : 'p2');
+    setTimeout(()=>{
+      diceModalEl.classList.remove('show');
+      beginPlayAfterDice();
+    }, 1300);
+  }
+
+  function beginPlayAfterDice(){
+    diceInProgress=false;
+    gamePhase='playing';
+
+    if(mode==='ai' && firstMover==='ai'){
+      setMessage('電腦擲贏，率先出手…');
+      scheduleAiMove();
+    } else if(mode==='ai'){
+      setMessage('你擲贏了，請翻開第一張棋子（電腦執另一方）');
+    } else if(firstMover==='p1'){
+      setMessage('玩家一先攻，請翻開第一張棋子');
+    } else {
+      setMessage('玩家二先攻，請翻開第一張棋子');
+    }
+  }
+
+  function setMessage(msg){ statusMsgEl.textContent=msg; }
+
+  function logMove(text){
+    const li=document.createElement('li');
+    li.innerHTML=text;
+    logListEl.appendChild(li);
+    logListEl.scrollTop=logListEl.scrollHeight;
+  }
+
+  function flashInvalid(index){
+    playSound('invalid');
+    const cellEl=boardEl.children[index];
+    cellEl.classList.remove('shake'); void cellEl.offsetWidth; cellEl.classList.add('shake');
+  }
+
+  function attemptMoveTo(index){
+    const legalMoves=getLegalMovesForTurn(selected);
+    const m=legalMoves.find(mv=>mv.to===index);
+    if(m){ performMove(selected,index,m.capture); return true; }
+    // was it only rejected because of the long-chase rule? give a clearer signal than a generic shake.
+    const rawMoves=getValidMoves(selected);
+    const rawMatch=rawMoves.find(mv=>mv.to===index && !mv.capture);
+    if(rawMatch && isChaseBannedMove(cells[selected], selected, index)){
+      flashInvalid(index);
+      playSound('invalid');
+      setMessage('長捉！請改走其他棋子');
+      return true;
+    }
+    return false;
+  }
+
+  function onCellClick(index){
+    if(gameOver) return;
+    if(diceInProgress) return;
+    if(isAiThinking) return;
+    if(mode==='ai' && aiColor!==null && currentColor===aiColor) return;
+
+    const pid=cells[index];
+
+    if(pid==null){
+      if(selected!=null && attemptMoveTo(index)) return;
+      flashInvalid(index);
+      return;
+    }
+
+    const p=pieces[pid];
+
+    if(!p.revealed){
+      selected=null;
+      performFlip(index, 'human');
+      return;
+    }
+
+    if(currentColor!==null && p.color!==currentColor){
+      if(selected!=null && attemptMoveTo(index)) return;
+      flashInvalid(index);
+      return;
+    }
+
+    if(currentColor===null){ flashInvalid(index); return; }
+
+    if(selected===index){ selected=null; render(); return; }
+    selected=index; render();
+  }
+
+  function performFlip(index, actingSide){
+    const pid=cells[index]; const p=pieces[pid];
+    if(p.revealed) return;
+    p.revealed=true;
+    p.justRevealed=true;
+    playSound('flip');
+    logMove(`<span class="tag">${sideLabel(p.color)}</span> 翻開 ${NAMES[p.color][p.type]}`);
+    const mover = currentColor===null ? p.color : currentColor;
+    if(mode==='ai' && humanColor===null){
+      // Whoever makes the very first flip of the game (decided by the dice
+      // roll — could be either side) has that piece's color become their side.
+      if(actingSide==='ai'){ aiColor=p.color; humanColor=opponentOf(p.color); }
+      else { humanColor=p.color; aiColor=opponentOf(p.color); }
+    }
+    chaseState=null; // a new piece entering play clears any long-chase tracking
+    advanceTurn(mover);
+  }
+
+  function performMove(from,to,isCapture){
+    const pid=cells[from]; const p=pieces[pid];
+    const mover=p.color;
+    if(isCapture){
+      const dpid=cells[to]; const def=pieces[dpid];
+      def.captured=true; def.cell=null;
+      cells[to]=null;
+      playSound('capture');
+      logMove(`<span class="tag">${sideLabel(mover)}</span> ${NAMES[mover][p.type]} 吃 ${sideLabel(def.color)}${NAMES[def.color][def.type]}`);
+    } else {
+      playSound('move');
+      logMove(`<span class="tag">${sideLabel(mover)}</span> ${NAMES[mover][p.type]} 移動`);
+    }
+    cells[from]=null;
+    cells[to]=pid;
+    p.cell=to;
+    selected=null;
+    updateChaseState(mover, pid, isCapture);
+
+    advanceTurn(mover);
+  }
+
+  function advanceTurn(mover){
+    currentColor = mover==='red' ? 'black' : 'red';
+    if(mode==='ai' && currentColor===humanColor){
+      pushUndoCheckpoint();
+    }
+    render();
+    checkGameOver();
+  }
+
+  function checkGameOver(){
+    const redAlive = pieces.some(p=>p.color==='red' && !p.captured);
+    const blackAlive = pieces.some(p=>p.color==='black' && !p.captured);
+    if(!redAlive){ endGame('black','紅方棋子全滅'); return; }
+    if(!blackAlive){ endGame('red','黑方棋子全滅'); return; }
+    if(currentColor!==null && !hasAnyLegalMove(currentColor)){
+      const other = currentColor==='red' ? 'black' : 'red';
+      endGame(other, `${sideLabel(currentColor)}已無棋可走`);
+      return;
+    }
+    if(currentColor===null){
+      setMessage(mode==='ai' ? '翻開第一張棋子，決定你的顏色（電腦執另一方）' : '請翻開第一張棋子，決定你的顏色');
+      return;
+    }
+    if(mode==='ai' && currentColor===aiColor){
+      scheduleAiMove();
+      return;
+    }
+    if(mode==='ai' && currentColor===humanColor){
+      setMessage('輪到你行棋');
+    } else {
+      setMessage(`輪到 ${sideLabel(currentColor)} 行棋`);
+    }
+  }
+
+  function endGame(winnerColor, reason){
+    gameOver=true;
+    setMessage(`${reason}`);
+    gameoverText.textContent = `${reason} · ${sideLabel(winnerColor)}獲勝！`;
+    gameoverBanner.classList.add('show');
+  }
+
+  // ---------- undo ("悔棋"), vs-computer mode only ----------
+  // historyStack holds one snapshot per point where it becomes the human's
+  // turn (taken in advanceTurn). The top of the stack is "where we are now",
+  // so undo pops it and restores the one before — undoing the human's last
+  // move together with the AI's reply.
+  function pushUndoCheckpoint(){
+    historyStack.push({
+      cells: cells.slice(),
+      pieces: pieces.map(p=>({...p})),
+      currentColor,
+      chaseState: chaseState ? {...chaseState} : null,
+      aiResignStreak,
+      logHTML: logListEl.innerHTML,
+    });
+  }
+
+  function restoreUndoSnapshot(snap){
+    cells = snap.cells.slice();
+    pieces = snap.pieces.map(p=>({...p}));
+    currentColor = snap.currentColor;
+    chaseState = snap.chaseState ? {...snap.chaseState} : null;
+    aiResignStreak = snap.aiResignStreak;
+    selected = null;
+    gameOver = false;
+    isAiThinking = false;
+    boardEl.classList.remove('thinking');
+    gameoverBanner.classList.remove('show');
+    logListEl.innerHTML = snap.logHTML;
+    logMove('<span class="tag">↩</span> 悔棋');
+    render();
+    setMessage('已悔棋，輪到你重新行棋');
+  }
+
+  function canUndo(){
+    if(mode!=='ai' || gamePhase!=='playing') return false;
+    if(gameOver || isAiThinking || diceInProgress) return false;
+    if(humanColor===null || currentColor!==humanColor) return false;
+    return historyStack.length>=2;
+  }
+
+  function performUndo(){
+    if(!canUndo()) return;
+    historyStack.pop(); // discard "now" — we want the point before it
+    restoreUndoSnapshot(historyStack[historyStack.length-1]);
+  }
+
+  // ---------- render ----------
+  function render(){
+    for(let i=0;i<TOTAL;i++){
+      const cellEl=boardEl.children[i];
+      cellEl.classList.remove('valid-move','valid-capture','chase-banned');
+      const pid=cells[i];
+
+      let pieceEl=cellEl.querySelector('.piece');
+      if(pid==null){
+        if(pieceEl) pieceEl.remove();
+        cellEl.classList.add('captured-slot');
+        continue;
+      }
+      cellEl.classList.remove('captured-slot');
+      const p=pieces[pid];
+
+      if(!pieceEl){
+        pieceEl=document.createElement('div');
+        pieceEl.className='piece';
+        pieceEl.innerHTML = `
+          <div class="face back"></div>
+          <div class="face front">
+            <div class="stamp-burst"></div>
+            <span class="glyph"></span>
+          </div>`;
+        pieceEl.addEventListener('click',(e)=>{ e.stopPropagation(); onCellClick(i); });
+        cellEl.appendChild(pieceEl);
+      }
+
+      const glyphEl=pieceEl.querySelector('.glyph');
+      const frontEl=pieceEl.querySelector('.face.front');
+      glyphEl.textContent = NAMES[p.color][p.type];
+      frontEl.classList.toggle('red', p.color==='red');
+      frontEl.classList.toggle('black', p.color==='black');
+      frontEl.classList.toggle('rank-general', p.type==='general');
+
+      pieceEl.classList.toggle('revealed', p.revealed);
+      pieceEl.classList.toggle('selected', selected===i);
+
+      if(p.justRevealed){
+        pieceEl.classList.add('just-revealed');
+        p.justRevealed=false;
+        setTimeout(()=>pieceEl.classList.remove('just-revealed'), 600);
+      }
+    }
+
+    if(selected!=null){
+      const legalMoves=getLegalMovesForTurn(selected);
+      legalMoves.forEach(m=>{
+        const cellEl=boardEl.children[m.to];
+        cellEl.classList.add(m.capture ? 'valid-capture' : 'valid-move');
+      });
+      const rawMoves=getValidMoves(selected);
+      rawMoves.forEach(m=>{
+        if(!m.capture && isChaseBannedMove(cells[selected], selected, m.to)){
+          boardEl.children[m.to].classList.add('chase-banned');
+        }
+      });
+    }
+
+    sealRedEl.classList.toggle('active', currentColor==='red' && !gameOver);
+    sealBlackEl.classList.toggle('active', currentColor==='black' && !gameOver);
+
+    btnUndoEl.hidden = (mode!=='ai');
+    btnUndoEl.disabled = !canUndo();
+
+    if(chaseState && !pieces[chaseState.targetPieceId].captured){
+      const chaser=pieces[chaseState.chaserPieceId];
+      const target=pieces[chaseState.targetPieceId];
+      chaseStatusEl.hidden=false;
+      if(chaseState.cycles>=CHASE_BAN_AT_CYCLE){
+        chaseStatusEl.textContent=`⚠ 長捉偵測：${sideLabel(chaser.color)}${NAMES[chaser.color][chaser.type]} 已追捉 ${sideLabel(target.color)}${NAMES[target.color][target.type]} ${chaseState.cycles} 迴圈，不得再重複，須改走其他棋子`;
+      } else {
+        chaseStatusEl.textContent=`追捉中：${sideLabel(chaser.color)}${NAMES[chaser.color][chaser.type]} → ${sideLabel(target.color)}${NAMES[target.color][target.type]}（${chaseState.cycles}/${CHASE_BAN_AT_CYCLE+1} 迴圈）`;
+      }
+    } else {
+      chaseStatusEl.hidden=true;
+    }
+
+    if(mode==='ai' && humanColor){
+      whoRedEl.textContent = humanColor==='red' ? '玩家' : '電腦';
+      whoBlackEl.textContent = humanColor==='black' ? '玩家' : '電腦';
+    } else {
+      whoRedEl.textContent=''; whoBlackEl.textContent='';
+    }
+
+    const redAliveCount = pieces.filter(p=>p.color==='red' && !p.captured).length;
+    const blackAliveCount = pieces.filter(p=>p.color==='black' && !p.captured).length;
+    redCountEl.textContent = redAliveCount;
+    blackCountEl.textContent = blackAliveCount;
+
+    const redDead = pieces.filter(p=>p.color==='red' && p.captured);
+    const blackDead = pieces.filter(p=>p.color==='black' && p.captured);
+    redDeadCountEl.textContent = redDead.length;
+    blackDeadCountEl.textContent = blackDead.length;
+    trayRedEl.innerHTML = redDead.map(p=>`<div class="mini red">${NAMES.red[p.type]}</div>`).join('');
+    trayBlackEl.innerHTML = blackDead.map(p=>`<div class="mini black">${NAMES.black[p.type]}</div>`).join('');
+  }
+
+  // ---------- controls ----------
+  document.getElementById('btnNew').addEventListener('click', showSetupScreen);
+  document.getElementById('btnReplay').addEventListener('click', showSetupScreen);
+  btnStartGameEl.addEventListener('click', newGame);
+  btnUndoEl.addEventListener('click', performUndo);
+  btnRollDiceEl.addEventListener('click', rollDice);
+  document.getElementById('btnMute').addEventListener('click', function(){
+    muted=!muted;
+    this.textContent = muted ? '🔇 靜音' : '🔊 音效';
+  });
+  document.getElementById('rotateTipClose').addEventListener('click', function(){
+    document.getElementById('rotateTip').classList.add('dismissed');
+  });
+
+  modeSegEl.addEventListener('click', (e)=>{
+    const btn=e.target.closest('.seg-btn'); if(!btn) return;
+    const newMode=btn.dataset.mode;
+    if(newMode===mode) return;
+    mode=newMode;
+    [...modeSegEl.children].forEach(b=>b.classList.toggle('active', b===btn));
+    diffSegEl.hidden = (mode!=='ai');
+    showSetupScreen();
+  });
+  diffSegEl.addEventListener('click', (e)=>{
+    const btn=e.target.closest('.seg-btn'); if(!btn) return;
+    difficulty=btn.dataset.diff;
+    [...diffSegEl.children].forEach(b=>b.classList.toggle('active', b===btn));
+  });
+
+  const rulesModal=document.getElementById('rulesModal');
+  document.getElementById('btnRules').addEventListener('click', ()=>rulesModal.classList.add('show'));
+  document.getElementById('btnCloseRules').addEventListener('click', ()=>rulesModal.classList.remove('show'));
+  rulesModal.addEventListener('click', (e)=>{ if(e.target===rulesModal) rulesModal.classList.remove('show'); });
+
+  showSetupScreen();
+})();
+</script>
+</body>
+</html>
